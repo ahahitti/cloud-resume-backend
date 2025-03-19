@@ -1,0 +1,43 @@
+AWSTemplateFormatVersion: '2010-09-09'  # Specifies the CloudFormation template format version.
+Transform: AWS::Serverless-2016-10-31   # Enables AWS SAM-specific features and shorthand syntax.
+
+Resources:
+  # ✅ Defines a DynamoDB Table named "VisitorCounter"
+  VisitorCounterTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: VisitorCounter  # Sets the table name.
+      AttributeDefinitions:
+        - AttributeName: id       # Defines the primary key as "id".
+          AttributeType: S        # "S" means it's a string-type key.
+      KeySchema:
+        - AttributeName: id       # Specifies that "id" is the partition key.
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST  # No provisioning required, pay only for usage.
+
+  # ✅ Defines a Lambda Function to handle visitor counting
+  VisitorCounterFunction:
+    Type: AWS::Serverless::Function  # Specifies that this is a Lambda function.
+    Properties:
+      Runtime: python3.9  # The programming language and version for the Lambda function.
+      Handler: app.lambda_handler  # The entry point: function "lambda_handler" inside "app.py".
+      CodeUri: .  # Points to the directory containing the Lambda function code.
+      MemorySize: 128  # Allocates 128MB of memory to the function.
+      Timeout: 5  # Maximum execution time in seconds before timeout.
+      Policies:
+        - AmazonDynamoDBFullAccess  # Grants full access to DynamoDB (needed to update visitor count).
+      Environment:
+        Variables:
+          TABLE_NAME: VisitorCounter  # Sets the environment variable to store the table name.
+      Events:
+        GetVisitorCount:
+          Type: Api  # Defines an API Gateway event trigger for this Lambda function.
+          Properties:
+            Path: /visitorcount  # API Gateway will invoke this function at this endpoint.
+            Method: GET  # Specifies that the endpoint only responds to HTTP GET requests.
+
+Outputs:
+  # ✅ Provides the API Gateway URL after deployment
+  ApiGatewayInvokeURL:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/visitorcount"
